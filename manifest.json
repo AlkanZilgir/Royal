@@ -1,0 +1,17 @@
+{
+  "name": "Board Royal",
+  "short_name": "Board Royal",
+  "description": "Play Chess, Nine Men's Morris, Checkers and more — online or offline.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0806",
+  "theme_color": "#0d0806",
+  "orientation": "any",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [],
+  "lang": "en"
+}
