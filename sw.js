@@ -1,5 +1,5 @@
 // Board Royal — Service Worker v2
-const CACHE = 'boardroyal-v2';
+const CACHE = 'boardroyal-v3';
 
 self.addEventListener('install', () => self.skipWaiting());
 
