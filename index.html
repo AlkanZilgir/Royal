@@ -2,18 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Board Royal – Classic Games Online</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Board Royal</title>
   <meta name="description" content="Play Chess, Nine Men's Morris, Checkers and more online or offline.">
+
+  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0d0806">
+  <meta name="theme-color" content="#07091a">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Board Royal">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -52,12 +60,12 @@
           </div>
           <button class="btn-primary" id="btn-login">Enter the Hall</button>
           <p class="auth-err" id="login-err"></p>
-          <button class="btn-ghost" id="btn-guest">Play as Guest</button>
+          <button class="btn-ghost" id="btn-guest">Continue as Guest</button>
         </div>
         <div id="auth-form-signup" class="auth-form">
           <div class="field-group">
             <label>Display Name</label>
-            <input type="text" id="signup-name" placeholder="Your royal name" autocomplete="username">
+            <input type="text" id="signup-name" placeholder="Your name" autocomplete="username">
           </div>
           <div class="field-group">
             <label>Email</label>
@@ -74,10 +82,10 @@
     </div>
   </div>
 
-  <!-- HOME / GAME SELECTION -->
+  <!-- HOME -->
   <div id="screen-home" class="screen">
     <header class="site-header">
-      <div class="header-logo"><span>♛</span> Board Royal</div>
+      <div class="header-logo">♛ Board Royal</div>
       <div class="header-user">
         <span id="user-display-name"></span>
         <button class="btn-icon" id="btn-logout" title="Sign out">⎋</button>
@@ -90,31 +98,31 @@
       </div>
       <div class="games-grid" id="games-grid">
         <div class="game-card" data-game="chess">
-          <div class="game-icon">♟</div>
+          <span class="game-icon">♟</span>
           <h3>Chess</h3>
-          <p>The ultimate game of strategy. 64 squares. Infinite possibilities.</p>
+          <p>The ultimate strategy game. 64 squares, infinite possibilities.</p>
           <span class="game-tag">2 Players</span>
         </div>
         <div class="game-card" data-game="morris">
-          <div class="game-icon">◉</div>
+          <span class="game-icon">◉</span>
           <h3>Nine Men's Morris</h3>
           <p>Ancient mill game of placement, movement and removal.</p>
           <span class="game-tag">2 Players</span>
         </div>
         <div class="game-card" data-game="checkers">
-          <div class="game-icon">⬤</div>
+          <span class="game-icon">⬤</span>
           <h3>Checkers</h3>
           <p>Jump, capture and crown your way to victory.</p>
           <span class="game-tag">2 Players</span>
         </div>
         <div class="game-card" data-game="connect4">
-          <div class="game-icon">⬡</div>
+          <span class="game-icon">⬡</span>
           <h3>Connect Four</h3>
           <p>Drop your disc. Line up four. Outwit your opponent.</p>
           <span class="game-tag">2 Players</span>
         </div>
         <div class="game-card" data-game="tictactoe">
-          <div class="game-icon">#</div>
+          <span class="game-icon">#</span>
           <h3>Tic-Tac-Toe</h3>
           <p>Simple. Classic. Deceptively tactical.</p>
           <span class="game-tag">2 Players</span>
@@ -123,17 +131,17 @@
     </main>
   </div>
 
-  <!-- MODE SELECTION -->
+  <!-- MODE SELECT -->
   <div id="screen-mode" class="screen">
     <div class="mode-container">
       <button class="btn-back" id="mode-back">← Back</button>
       <div class="mode-hero">
-        <div class="mode-game-icon" id="mode-game-icon"></div>
+        <span class="mode-game-icon" id="mode-game-icon"></span>
         <h2 id="mode-game-title"></h2>
       </div>
       <div class="mode-cards">
         <div class="mode-card" id="mode-local">
-          <div class="mode-symbol">⚔</div>
+          <div class="mode-symbol">⚔️</div>
           <h3>Local Play</h3>
           <p>Two players on the same device, taking turns.</p>
           <button class="btn-primary">Play Local</button>
@@ -141,15 +149,15 @@
         <div class="mode-card" id="mode-online-create">
           <div class="mode-symbol">🌐</div>
           <h3>Create Room</h3>
-          <p>Host a game and invite a friend with a code.</p>
+          <p>Host a game and share the code with a friend.</p>
           <button class="btn-primary">Create Room</button>
         </div>
         <div class="mode-card" id="mode-online-join">
           <div class="mode-symbol">🔑</div>
           <h3>Join Room</h3>
-          <p>Enter your friend's room code to join their game.</p>
+          <p>Enter a room code to join a friend's game.</p>
           <div class="join-row">
-            <input type="text" id="room-code-input" placeholder="Room code" maxlength="6">
+            <input type="text" id="room-code-input" placeholder="XXXXXX" maxlength="6">
             <button class="btn-primary" id="btn-join-room">Join</button>
           </div>
           <p class="join-err" id="join-err"></p>
@@ -161,14 +169,14 @@
   <!-- WAITING ROOM -->
   <div id="screen-waiting" class="screen">
     <div class="waiting-container">
-      <button class="btn-back" id="waiting-back">← Leave Room</button>
+      <button class="btn-back" id="waiting-back">← Leave</button>
       <div class="waiting-center">
         <div class="waiting-symbol">⏳</div>
-        <h2>Room Created!</h2>
+        <h2>Room Ready!</h2>
         <p>Share this code with your friend:</p>
         <div class="room-code-display" id="room-code-show"></div>
-        <button class="btn-ghost btn-copy" id="btn-copy-code">Copy Code</button>
-        <p class="waiting-status">Waiting for opponent to join…</p>
+        <button class="btn-ghost" id="btn-copy-code">📋 Copy Code</button>
+        <p class="waiting-status">Waiting for opponent…</p>
         <div class="waiting-dots"><span></span><span></span><span></span></div>
       </div>
     </div>
@@ -190,7 +198,7 @@
         <span id="player1-name">Player 1</span>
       </div>
       <div class="turn-display" id="turn-display">Player 1's Turn</div>
-      <div class="player-indicator p2" id="player2-indicator">
+      <div class="player-indicator" id="player2-indicator">
         <span id="player2-name">Player 2</span>
         <div class="player-piece p2-piece"></div>
       </div>
@@ -198,24 +206,26 @@
     <div class="game-area">
       <div id="game-board-container"></div>
       <div id="game-info-panel">
-        <div id="captured-pieces-panel" class="info-section" style="display:none">
+        <div id="captured-pieces-panel" class="info-section">
           <h4>Captured</h4>
-          <div id="captured-white"></div>
-          <div id="captured-black"></div>
+          <div class="captured-label">White</div><div id="captured-white" class="captured-row"></div>
+          <div class="captured-label">Black</div><div id="captured-black" class="captured-row"></div>
         </div>
-        <div id="game-log-panel" class="info-section">
+        <div class="info-section">
           <h4>Game Log</h4>
           <div id="game-log-list"></div>
         </div>
       </div>
     </div>
+
     <!-- Promotion Modal -->
     <div id="promotion-modal" class="modal hidden">
       <div class="modal-inner">
-        <h3>Choose Promotion</h3>
+        <h3>Promote Pawn</h3>
         <div class="promotion-choices" id="promotion-choices"></div>
       </div>
     </div>
+
     <!-- Result Modal -->
     <div id="result-modal" class="modal hidden">
       <div class="modal-inner result-inner">
@@ -230,14 +240,14 @@
     </div>
   </div>
 
-</div><!-- #app -->
+</div>
 
-<!-- Firebase v10 compat CDN -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 
-<!-- App -->
+<!-- App Scripts -->
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/games/chess.js"></script>
@@ -247,9 +257,15 @@
 <script src="js/games/tictactoe.js"></script>
 <script src="js/online.js"></script>
 <script src="js/app.js"></script>
+
 <script>
+  // Register service worker for PWA
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { scope: './' })
+        .then(r => console.log('SW registered', r.scope))
+        .catch(e => console.log('SW failed', e));
+    });
   }
 </script>
 </body>
