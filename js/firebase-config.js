@@ -1,7 +1,7 @@
 const firebaseConfig = {
   apiKey:            "AIzaSyBIyzkFbAB9zgb96gU4X-0Wi9tO79GfCFs",
   authDomain:        "royal-85724.firebaseapp.com",
-  databaseURL:       "https://royal-85724-default-rtdb.firebaseio.com",
+  databaseURL:       "https://royal-85724-default-rtdb.europe-west1.firebasedatabase.app",
   projectId:         "royal-85724",
   storageBucket:     "royal-85724.firebasestorage.app",
   messagingSenderId: "25019549689",
