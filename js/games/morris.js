@@ -1,272 +1,228 @@
 // ============================================================
-//  BOARD ROYAL — Nine Men's Morris Engine + SVG Renderer
-//  Phases: 1=Placement, 2=Movement, 3=Flying(3 pieces left)
-//  Points 0-23 arranged in 3 concentric squares
+//  BOARD ROYAL — Nine Men's Morris (Fixed piece visibility)
 // ============================================================
 window.MorrisGame = (() => {
-  /* Point layout - 3 concentric squares, 8 points each
-     Outer:  0  1  2  3  4  5  6  7
-     Middle: 8  9  10 11 12 13 14 15
-     Inner: 16 17 18 19 20 21 22 23  */
-
-  // SVG coordinates for each point (in a 460x460 space, center 230,230)
   const COORDS = [
-    [20,20],[230,20],[440,20],[440,230],[440,440],[230,440],[20,440],[20,230],  // outer
-    [80,80],[230,80],[380,80],[380,230],[380,380],[230,380],[80,380],[80,230],  // middle
-    [140,140],[230,140],[320,140],[320,230],[320,320],[230,320],[140,320],[140,230] // inner
+    [20,20],[230,20],[440,20],[440,230],[440,440],[230,440],[20,440],[20,230],
+    [80,80],[230,80],[380,80],[380,230],[380,380],[230,380],[80,380],[80,230],
+    [140,140],[230,140],[320,140],[320,230],[320,320],[230,320],[140,320],[140,230]
   ];
-
-  // Mills: all possible lines of 3 that form a mill
   const MILLS = [
-    [0,1,2],[2,3,4],[4,5,6],[6,7,0],        // outer
-    [8,9,10],[10,11,12],[12,13,14],[14,15,8],// middle
-    [16,17,18],[18,19,20],[20,21,22],[22,23,16],// inner
-    [1,9,17],[3,11,19],[5,13,21],[7,15,23]  // spokes
+    [0,1,2],[2,3,4],[4,5,6],[6,7,0],
+    [8,9,10],[10,11,12],[12,13,14],[14,15,8],
+    [16,17,18],[18,19,20],[20,21,22],[22,23,16],
+    [1,9,17],[3,11,19],[5,13,21],[7,15,23]
   ];
-
-  // Adjacency for movement phase
   const ADJACENT = {
     0:[1,7],1:[0,2,9],2:[1,3],3:[2,4,11],4:[3,5],5:[4,6,13],6:[5,7],7:[6,0,15],
     8:[9,15],9:[8,10,17],10:[9,11],11:[10,12,19],12:[11,13],13:[12,14,21],14:[13,15],15:[14,8,23],
     16:[17,23],17:[16,18],18:[17,19],19:[18,20],20:[19,21],21:[20,22],22:[21,23],23:[22,16]
   };
 
-  let state = {}, callbacks = {}, isOnlineTurn = false;
-  let container = null;
+  let state={}, callbacks={}, isOnlineTurn=false, container=null;
 
-  function initState() {
+  function initState(){
     return {
-      board: new Array(24).fill(0), // 0=empty, 1=p1, 2=p2
-      current: 1,
-      phase: [1, 1],     // phase[0] for p1, phase[1] for p2
-      placed: [0, 0],    // pieces placed
-      removed: [0, 0],   // pieces removed from opponent
-      total: 9,          // pieces per player
-      pendingMill: false, // player must remove opponent piece
-      selected: null,    // point index for move phase
-      status: 'playing'
+      board: new Array(24).fill(0),
+      current:1, phase:[1,1], placed:[0,0], removed:[0,0],
+      total:9, pendingMill:false, selected:null, status:'playing'
     };
   }
 
-  function countPieces(board, player) {
-    return board.filter(v => v === player).length;
+  function countPieces(board,p){ return board.filter(v=>v===p).length; }
+  function checkMill(board,pt,p){ return MILLS.some(m=>m.includes(pt)&&m.every(i=>board[i]===p)); }
+
+  function getValidTargets(s,from){
+    const p=s.current, phase=s.phase[p-1];
+    if(phase===3) return s.board.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
+    return ADJACENT[from].filter(n=>s.board[n]===0);
   }
 
-  function checkMill(board, point, player) {
-    return MILLS.some(mill => mill.includes(point) && mill.every(p => board[p] === player));
+  function canMove(s,player){
+    if(s.phase[player-1]===3) return true;
+    return s.board.map((v,i)=>v===player?i:-1).filter(i=>i>=0)
+      .some(p=>ADJACENT[p].some(n=>s.board[n]===0));
   }
 
-  function hasAdjacentEmpty(board, point) {
-    return ADJACENT[point].some(n => board[n] === 0);
-  }
-
-  function canMove(s, player) {
-    const phase = s.phase[player - 1];
-    if (phase === 3) return true; // flying — any empty
-    const points = s.board.map((v, i) => v === player ? i : -1).filter(i => i >= 0);
-    return points.some(p => ADJACENT[p].some(n => s.board[n] === 0));
-  }
-
-  function getValidTargets(s, from) {
-    const player = s.current;
-    const phase = s.phase[player - 1];
-    if (phase === 3) return s.board.map((v,i) => v===0 ? i : -1).filter(i=>i>=0);
-    return ADJACENT[from].filter(n => s.board[n] === 0);
-  }
-
-  function checkGameOver(s) {
-    if (s.placed[0] >= s.total && s.placed[1] >= s.total) {
-      for (const player of [1, 2]) {
-        const pieces = countPieces(s.board, player);
-        if (pieces < 3) return player === 1 ? 'p2wins' : 'p1wins';
-        if (!canMove(s, player)) return player === 1 ? 'p2wins' : 'p1wins';
+  function checkGameOver(s){
+    if(s.placed[0]>=s.total&&s.placed[1]>=s.total){
+      for(const p of[1,2]){
+        if(countPieces(s.board,p)<3) return p===1?'p2wins':'p1wins';
+        if(!canMove(s,p)) return p===1?'p2wins':'p1wins';
       }
     }
     return null;
   }
 
-  // ---- Public API ----
-  function start(cont, savedState, cbs, onlineTurn) {
-    container = cont;
-    callbacks = cbs || {};
-    isOnlineTurn = onlineTurn || false;
-    state = savedState ? JSON.parse(JSON.stringify(savedState)) : initState();
+  function start(cont,savedState,cbs,onlineTurn){
+    container=cont; callbacks=cbs||{}; isOnlineTurn=!!onlineTurn;
+    state=savedState?JSON.parse(JSON.stringify(savedState)):initState();
     render();
   }
 
-  function loadState(cont, newState, onlineTurn) {
-    container = cont;
-    state = JSON.parse(JSON.stringify(newState));
-    isOnlineTurn = onlineTurn;
+  function loadState(cont,newState,onlineTurn){
+    container=cont; state=JSON.parse(JSON.stringify(newState)); isOnlineTurn=!!onlineTurn;
     render();
-    const over = checkGameOver(state);
-    if (over) setTimeout(() => callbacks.onResult && callbacks.onResult(over, state), 300);
+    const over=checkGameOver(state);
+    if(over) setTimeout(()=>callbacks.onResult&&callbacks.onResult(over,state),300);
   }
 
-  function getState() { return JSON.parse(JSON.stringify(state)); }
+  function getState(){ return JSON.parse(JSON.stringify(state)); }
 
-  function render() {
-    container.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.className = 'morris-board-wrap';
-    const ns = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('viewBox', '0 0 460 460');
+  function render(){
+    container.innerHTML='';
+    const wrap=document.createElement('div');
+    wrap.className='morris-board-wrap';
+    const ns='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('viewBox','0 0 460 460');
 
-    // Board lines
-    const lines = [
-      // squares
+    // Board background
+    const bg=document.createElementNS(ns,'rect');
+    bg.setAttribute('width','460'); bg.setAttribute('height','460');
+    bg.setAttribute('fill','#1a2744'); bg.setAttribute('rx','8');
+    svg.appendChild(bg);
+
+    // Draw lines
+    const lineGroups=[
       [0,1,2,3,4,5,6,7,0],[8,9,10,11,12,13,14,15,8],[16,17,18,19,20,21,22,23,16],
-      // spokes
-      [1,9],[3,11],[5,13],[7,15],[9,17],[11,19],[13,21],[15,23]
+      [1,9],[9,17],[3,11],[11,19],[5,13],[13,21],[7,15],[15,23]
     ];
-    lines.forEach(pts => {
-      for (let i = 0; i < pts.length - 1; i++) {
-        const line = document.createElementNS(ns, 'line');
-        const [x1,y1]=COORDS[pts[i]], [x2,y2]=COORDS[pts[i+1]];
+    lineGroups.forEach(pts=>{
+      for(let i=0;i<pts.length-1;i++){
+        const line=document.createElementNS(ns,'line');
+        const[x1,y1]=COORDS[pts[i]],[x2,y2]=COORDS[pts[i+1]];
         line.setAttribute('x1',x1);line.setAttribute('y1',y1);
         line.setAttribute('x2',x2);line.setAttribute('y2',y2);
-        line.setAttribute('stroke','#5a4420');line.setAttribute('stroke-width','3');
+        line.setAttribute('stroke','#4a6fa5');line.setAttribute('stroke-width','3');
         svg.appendChild(line);
       }
     });
 
-    // Points
-    COORDS.forEach(([x,y], i) => {
-      const g = document.createElementNS(ns, 'g');
-      g.classList.add('morris-point');
-      g.dataset.idx = i;
+    // Draw points
+    COORDS.forEach(([x,y],i)=>{
+      const g=document.createElementNS(ns,'g');
+      g.style.cursor='pointer';
+      const player=state.board[i];
+      const isSel=state.selected===i;
+      const isTarget=state.selected!==null&&getValidTargets(state,state.selected).includes(i);
+      const isRemovable=state.pendingMill&&player!==0&&player!==state.current;
 
-      const player = state.board[i];
-      const isSelected = state.selected === i;
-      const isValidTarget = state.selected !== null && getValidTargets(state, state.selected).includes(i);
-      const isRemovable = state.pendingMill && player !== 0 && player !== state.current;
-
-      // Outer ring / highlight
-      const outer = document.createElementNS(ns, 'circle');
-      outer.setAttribute('cx',x); outer.setAttribute('cy',y); outer.setAttribute('r','22');
-      outer.setAttribute('fill', isSelected ? 'rgba(200,169,81,.5)' : isValidTarget ? 'rgba(200,169,81,.25)' : isRemovable ? 'rgba(139,26,26,.4)' : 'transparent');
-      svg.appendChild(outer);
-
-      // Main circle
-      const circle = document.createElementNS(ns, 'circle');
-      circle.setAttribute('cx',x); circle.setAttribute('cy',y); circle.setAttribute('r','16');
-      if (player === 1) {
-        circle.setAttribute('fill','#f5f0e8');
-        circle.setAttribute('stroke','#c8a951');
-        circle.setAttribute('stroke-width','2');
-      } else if (player === 2) {
-        circle.setAttribute('fill','#1a0e05');
-        circle.setAttribute('stroke','#5a4420');
-        circle.setAttribute('stroke-width','2');
-      } else {
-        circle.setAttribute('fill','#2a1c0e');
-        circle.setAttribute('stroke','#5a4420');
-        circle.setAttribute('stroke-width','1.5');
+      // Highlight ring
+      if(isSel||isTarget||isRemovable){
+        const ring=document.createElementNS(ns,'circle');
+        ring.setAttribute('cx',x);ring.setAttribute('cy',y);ring.setAttribute('r','24');
+        ring.setAttribute('fill', isSel?'rgba(99,102,241,0.4)':isTarget?'rgba(99,102,241,0.2)':'rgba(239,68,68,0.3)');
+        svg.appendChild(ring);
       }
-      g.appendChild(outer);
-      g.appendChild(circle);
 
-      // Hover area
-      const hit = document.createElementNS(ns, 'circle');
-      hit.setAttribute('cx',x); hit.setAttribute('cy',y); hit.setAttribute('r','22');
+      // Main piece or empty slot
+      const circle=document.createElementNS(ns,'circle');
+      circle.setAttribute('cx',x);circle.setAttribute('cy',y);circle.setAttribute('r','17');
+
+      if(player===1){
+        // Player 1 — bright white/cream piece
+        circle.setAttribute('fill','#f0f0ff');
+        circle.setAttribute('stroke','#6366f1');
+        circle.setAttribute('stroke-width','3');
+      } else if(player===2){
+        // Player 2 — vivid red piece (clearly visible on dark blue)
+        circle.setAttribute('fill','#ef4444');
+        circle.setAttribute('stroke','#fca5a5');
+        circle.setAttribute('stroke-width','3');
+      } else {
+        // Empty slot
+        circle.setAttribute('fill','#243558');
+        circle.setAttribute('stroke','#4a6fa5');
+        circle.setAttribute('stroke-width','2');
+      }
+
+      // Hit area
+      const hit=document.createElementNS(ns,'circle');
+      hit.setAttribute('cx',x);hit.setAttribute('cy',y);hit.setAttribute('r','24');
       hit.setAttribute('fill','transparent');
-      g.appendChild(hit);
 
-      g.addEventListener('click', () => handleClick(i));
+      g.appendChild(circle);
+      g.appendChild(hit);
+      g.addEventListener('click',()=>handleClick(i));
       svg.appendChild(g);
     });
 
-    // Phase indicator badge
-    const phaseInfo = document.createElementNS(ns, 'text');
-    let phaseText = '';
-    if (state.pendingMill) phaseText = `P${state.current}: Remove opponent piece`;
-    else if (state.phase[state.current-1] === 1) phaseText = `P${state.current}: Place piece (${state.total - state.placed[state.current-1]} left)`;
-    else phaseText = `P${state.current}: Move a piece`;
-    phaseInfo.setAttribute('x','230');phaseInfo.setAttribute('y','452');
-    phaseInfo.setAttribute('text-anchor','middle');
-    phaseInfo.setAttribute('fill','#7a6330');phaseInfo.setAttribute('font-size','13');
-    phaseInfo.textContent = phaseText;
-    svg.appendChild(phaseInfo);
+    // Legend
+    const legend1=document.createElementNS(ns,'text');
+    legend1.setAttribute('x','10');legend1.setAttribute('y','456');
+    legend1.setAttribute('fill','#f0f0ff');legend1.setAttribute('font-size','13');
+    legend1.setAttribute('font-family','sans-serif');
+    legend1.textContent='● P1 (White)';
+    svg.appendChild(legend1);
+
+    const legend2=document.createElementNS(ns,'text');
+    legend2.setAttribute('x','340');legend2.setAttribute('y','456');
+    legend2.setAttribute('fill','#ef4444');legend2.setAttribute('font-size','13');
+    legend2.setAttribute('font-family','sans-serif');
+    legend2.textContent='● P2 (Red)';
+    svg.appendChild(legend2);
 
     wrap.appendChild(svg);
     container.appendChild(wrap);
-    if (callbacks.onStatusUpdate) callbacks.onStatusUpdate(state);
+    if(callbacks.onStatusUpdate) callbacks.onStatusUpdate(state);
   }
 
-  function handleClick(idx) {
-    if (isOnlineTurn) return;
-    if (state.status !== 'playing') return;
-    const player = state.current;
-    const phase = state.phase[player - 1];
+  function handleClick(idx){
+    if(isOnlineTurn||state.status!=='playing') return;
+    const player=state.current;
+    const phase=state.phase[player-1];
 
-    // Remove phase (after mill)
-    if (state.pendingMill) {
-      if (state.board[idx] !== 0 && state.board[idx] !== player) {
-        // Can't remove a piece that's in a mill unless all enemy pieces are in mills
-        const opponent = 3 - player;
-        const opPieces = state.board.map((v,i) => v===opponent ? i : -1).filter(i=>i>=0);
-        const allInMill = opPieces.every(p => checkMill(state.board, p, opponent));
-        if (!allInMill && checkMill(state.board, idx, opponent)) return; // skip
-        state.board[idx] = 0;
-        state.removed[player - 1]++;
-        state.pendingMill = false;
-        state.selected = null;
-        finishTurn();
-      }
-      return;
-    }
-
-    // Phase 1: Placement
-    if (phase === 1) {
-      if (state.board[idx] !== 0) return;
-      state.board[idx] = player;
-      state.placed[player - 1]++;
-      if (state.placed[player - 1] >= state.total) state.phase[player - 1] = 2;
-      if (checkMill(state.board, idx, player)) {
-        state.pendingMill = true;
-        render();
-        return;
-      }
+    if(state.pendingMill){
+      const opponent=3-player;
+      if(state.board[idx]!==opponent) return;
+      const opPieces=state.board.map((v,i)=>v===opponent?i:-1).filter(i=>i>=0);
+      const allInMill=opPieces.every(p=>checkMill(state.board,p,opponent));
+      if(!allInMill&&checkMill(state.board,idx,opponent)) return;
+      state.board[idx]=0;
+      state.removed[player-1]++;
+      state.pendingMill=false;
+      state.selected=null;
       finishTurn();
       return;
     }
 
-    // Phase 2/3: Movement
-    if (state.selected === null) {
-      if (state.board[idx] === player) { state.selected = idx; render(); }
+    if(phase===1){
+      if(state.board[idx]!==0) return;
+      state.board[idx]=player;
+      state.placed[player-1]++;
+      if(state.placed[player-1]>=state.total) state.phase[player-1]=2;
+      if(checkMill(state.board,idx,player)){ state.pendingMill=true; render(); return; }
+      finishTurn();
       return;
     }
-    // Clicking same piece — deselect
-    if (state.selected === idx) { state.selected = null; render(); return; }
-    // Clicking another own piece — re-select
-    if (state.board[idx] === player) { state.selected = idx; render(); return; }
-    // Attempt move
-    const targets = getValidTargets(state, state.selected);
-    if (!targets.includes(idx)) { state.selected = null; render(); return; }
-    state.board[idx] = player;
-    state.board[state.selected] = 0;
-    // Check flying
-    if (countPieces(state.board, player) === 3) state.phase[player-1] = 3;
-    state.selected = null;
-    if (checkMill(state.board, idx, player)) {
-      state.pendingMill = true;
-      render();
+
+    if(state.selected===null){
+      if(state.board[idx]===player){ state.selected=idx; render(); }
       return;
     }
+    if(state.selected===idx){ state.selected=null; render(); return; }
+    if(state.board[idx]===player){ state.selected=idx; render(); return; }
+
+    const targets=getValidTargets(state,state.selected);
+    if(!targets.includes(idx)){ state.selected=null; render(); return; }
+
+    state.board[idx]=player;
+    state.board[state.selected]=0;
+    if(countPieces(state.board,player)===3) state.phase[player-1]=3;
+    state.selected=null;
+    if(checkMill(state.board,idx,player)){ state.pendingMill=true; render(); return; }
     finishTurn();
   }
 
-  function finishTurn() {
-    state.current = 3 - state.current;
-    const over = checkGameOver(state);
-    if (over) { state.status = over; }
+  function finishTurn(){
+    state.current=3-state.current;
+    const over=checkGameOver(state);
+    if(over) state.status=over;
     render();
-    if (callbacks.onMove) callbacks.onMove(getState(), state.current===1?'host':'guest');
-    if (over) setTimeout(() => callbacks.onResult && callbacks.onResult(over, state), 400);
+    if(callbacks.onMove) callbacks.onMove(getState(),state.current===1?'host':'guest');
+    if(over) setTimeout(()=>callbacks.onResult&&callbacks.onResult(over,state),400);
   }
 
-  function initStateExport() { return initState(); }
-
-  return { start, loadState, getState, initState: initStateExport };
+  return { start, loadState, getState, initState };
 })();
