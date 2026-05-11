@@ -1,15 +1,18 @@
 // ============================================================
 //  BOARD ROYAL — Firebase Configuration
+//  TODO: Replace with YOUR Firebase project credentials
+//  Get these from: https://console.firebase.google.com
+//  → Your Project → Project Settings → "Your apps" → Config
 // ============================================================
 
 const firebaseConfig = {
-  apiKey:            "AIzaSyBIyzkFbAB9zgb96gU4X-0Wi9tO79GfCFs",
-  authDomain:        "royal-85724.firebaseapp.com",
-  databaseURL:       "https://royal-85724-default-rtdb.firebaseio.com",
-  projectId:         "royal-85724",
-  storageBucket:     "royal-85724.firebasestorage.app",
-  messagingSenderId: "25019549689",
-  appId:             "1:25019549689:web:72b2377d4df90ad5eb9f28"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
 
 // Initialize Firebase
