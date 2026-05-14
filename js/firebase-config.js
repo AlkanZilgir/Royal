@@ -7,13 +7,11 @@ const firebaseConfig = {
   messagingSenderId: "25019549689",
   appId:             "1:25019549689:web:72b2377d4df90ad5eb9f28"
 };
-
 try {
   firebase.initializeApp(firebaseConfig);
   window.fbAuth = firebase.auth();
   window.fbDB   = firebase.database();
   window.FIREBASE_READY = true;
-} catch (e) {
-  console.warn('Firebase error', e);
+} catch(e) {
   window.FIREBASE_READY = false;
 }
