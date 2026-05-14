@@ -1,179 +1,50 @@
-// ============================================================
-//  BOARD ROYAL — Checkers Engine + Renderer
-//  Board: 8×8 dark squares only. P1=bottom(red) P2=top(dark)
-//  Pieces: 1=P1 2=P2 11=P1King 22=P2King
-// ============================================================
 window.CheckersGame = (() => {
-  let state = {}, callbacks = {}, isOnlineTurn = false;
-  let container = null;
+  let S={},CB={},OT=false,CONT=null;
+  function initState(){const b=Array.from({length:8},()=>new Array(8).fill(0));for(let r=0;r<3;r++)for(let c=0;c<8;c++)if((r+c)%2===1)b[r][c]=2;for(let r=5;r<8;r++)for(let c=0;c<8;c++)if((r+c)%2===1)b[r][c]=1;return{board:b,cur:1,sel:null,moves:[],status:'playing'};}
+  const isK=v=>v===11||v===22,own=v=>v===1||v===11?1:v===2||v===22?2:0;
+  function jumps(b,r,c,p,seq=[]){const out=[];const dirs=isK(p)?[[-1,-1],[-1,1],[1,-1],[1,1]]:(own(p)===1?[[-1,-1],[-1,1]]:[[1,-1],[1,1]]);for(const[dr,dc]of dirs){const mr=r+dr,mc=c+dc,jr=r+2*dr,jc=c+2*dc;if(jr<0||jr>=8||jc<0||jc>=8)continue;if(!own(b[mr][mc])||own(b[mr][mc])===own(p))continue;if(b[jr][jc]!==0)continue;if(seq.some(s=>s[0]===mr&&s[1]===mc))continue;out.push({to:[jr,jc],over:[mr,mc],seq:[...seq,[mr,mc]]});}return out;}
+  function moves(b,r,c,mj){const p=b[r][c];if(!p)return[];const jj=jumps(b,r,c,p);if(jj.length||mj)return jj.map(j=>({from:[r,c],to:j.to,over:j.over,seq:j.seq,jump:true}));const dirs=isK(p)?[[-1,-1],[-1,1],[1,-1],[1,1]]:(own(p)===1?[[-1,-1],[-1,1]]:[[1,-1],[1,1]]);const out=[];for(const[dr,dc]of dirs){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<8&&nc>=0&&nc<8&&b[nr][nc]===0)out.push({from:[r,c],to:[nr,nc],jump:false});}return out;}
+  function allMoves(b,pl){const a=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(own(b[r][c])===pl)a.push(...moves(b,r,c,false));const hj=a.some(m=>m.jump);return hj?a.filter(m=>m.jump):a;}
+  function crown(r,c){const v=S.board[r][c];if(v===1&&r===0)S.board[r][c]=11;if(v===2&&r===7)S.board[r][c]=22;}
 
-  function initState() {
-    const board = Array.from({length:8}, () => new Array(8).fill(0));
-    for (let r = 0; r < 3; r++)
-      for (let c = 0; c < 8; c++)
-        if ((r+c)%2===1) board[r][c]=2;
-    for (let r = 5; r < 8; r++)
-      for (let c = 0; c < 8; c++)
-        if ((r+c)%2===1) board[r][c]=1;
-    return { board, current:1, selected:null, validMoves:[], mustJump:false, status:'playing', captured:{p1:0,p2:0} };
-  }
+  function start(cont,saved,cbs,ot){CONT=cont;CB=cbs||{};OT=!!ot;S=saved?JSON.parse(JSON.stringify(saved)):initState();render();}
+  function loadState(cont,ns,ot){CONT=cont;S=JSON.parse(JSON.stringify(ns));OT=!!ot;render();if(S.status!=='playing')setTimeout(()=>CB.onResult&&CB.onResult(S.status,S),300);}
+  function getState(){return JSON.parse(JSON.stringify(S));}
 
-  function isKing(v){ return v===11||v===22; }
-  function owner(v){ return v===1||v===11?1:v===2||v===22?2:0; }
-
-  function getJumps(board, r, c, piece, seq=[]) {
-    const jumps = [];
-    const dirs = isKing(piece) ? [[-1,-1],[-1,1],[1,-1],[1,1]] : (owner(piece)===1?[[-1,-1],[-1,1]]:[[1,-1],[1,1]]);
-    for (const [dr,dc] of dirs) {
-      const mr=r+dr, mc=c+dc, jr=r+2*dr, jc=c+2*dc;
-      if (jr<0||jr>=8||jc<0||jc>=8) continue;
-      if (owner(board[mr][mc])===0||owner(board[mr][mc])===owner(piece)) continue;
-      if (board[jr][jc]!==0) continue;
-      // Avoid capturing same square twice in sequence
-      if (seq.some(s=>s[0]===mr&&s[1]===mc)) continue;
-      jumps.push({to:[jr,jc],over:[mr,mc],seq:[...seq,[mr,mc]]});
+  function render(){
+    CONT.innerHTML='';
+    const board=document.createElement('div');board.className='checkers-board';
+    for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+      const sq=document.createElement('div');sq.className='csq '+((r+c)%2===0?'lt':'dk');
+      if(S.sel&&S.sel[0]===r&&S.sel[1]===c)sq.classList.add('sel');
+      const v=S.board[r][c];
+      if(v!==0){const d=document.createElement('div');d.className='disc '+(own(v)===1?'p1':'p2')+(isK(v)?' king':'');sq.appendChild(d);}
+      sq.addEventListener('click',()=>onClick(r,c));board.appendChild(sq);
     }
-    return jumps;
+    CONT.appendChild(board);if(CB.onStatusUpdate)CB.onStatusUpdate(S);
   }
 
-  function getMoves(board, r, c, mustJump) {
-    const piece = board[r][c];
-    const moves = [];
-    if (!piece) return moves;
-    // Jumps
-    const jumps = getJumps(board, r, c, piece);
-    if (jumps.length > 0 || mustJump) {
-      jumps.forEach(j => moves.push({from:[r,c],to:j.to,over:j.over,seq:j.seq,isJump:true}));
-      return moves;
+  function onClick(r,c){
+    if(OT||S.status!=='playing')return;
+    const v=S.board[r][c],am=allMoves(S.board,S.cur),mj=am.some(m=>m.jump);
+    if(S.sel){
+      const mv=S.moves.find(m=>m.to[0]===r&&m.to[1]===c);
+      if(mv){exec(mv);return;}
     }
-    // Regular moves
-    const dirs = isKing(piece)?[[-1,-1],[-1,1],[1,-1],[1,1]]:(owner(piece)===1?[[-1,-1],[-1,1]]:[[1,-1],[1,1]]);
-    for (const [dr,dc] of dirs) {
-      const nr=r+dr, nc=c+dc;
-      if (nr>=0&&nr<8&&nc>=0&&nc<8&&board[nr][nc]===0) moves.push({from:[r,c],to:[nr,nc],isJump:false});
-    }
-    return moves;
-  }
-
-  function getAllMoves(board, player) {
-    const allMoves = [];
-    for (let r=0;r<8;r++) for (let c=0;c<8;c++)
-      if (owner(board[r][c])===player) allMoves.push(...getMoves(board,r,c,false));
-    const hasJump = allMoves.some(m=>m.isJump);
-    return hasJump ? allMoves.filter(m=>m.isJump) : allMoves;
-  }
-
-  function start(cont, savedState, cbs, onlineTurn) {
-    container = cont;
-    callbacks = cbs || {};
-    isOnlineTurn = onlineTurn || false;
-    state = savedState ? JSON.parse(JSON.stringify(savedState)) : initState();
-    state.selected = null; state.validMoves = [];
+    if(own(v)===S.cur){const pm=moves(S.board,r,c,mj).filter(m=>!mj||(mj&&m.jump));S.sel=pm.length?[r,c]:null;S.moves=pm;}
+    else{S.sel=null;S.moves=[];}
     render();
   }
 
-  function loadState(cont, newState, onlineTurn) {
-    container = cont;
-    state = JSON.parse(JSON.stringify(newState));
-    isOnlineTurn = onlineTurn;
-    state.selected = null; state.validMoves = [];
-    render();
-    if (state.status !== 'playing') setTimeout(() => callbacks.onResult && callbacks.onResult(state.status, state), 300);
+  function exec(mv){
+    const[fr,fc]=mv.from,[tr,tc]=mv.to,p=S.board[fr][fc];
+    S.board[tr][tc]=p;S.board[fr][fc]=0;
+    if(mv.jump){const[or,oc]=mv.over;S.board[or][oc]=0;crown(tr,tc);const fj=jumps(S.board,tr,tc,p,mv.seq||[]);if(fj.length){S.sel=[tr,tc];S.moves=fj.map(j=>({from:[tr,tc],to:j.to,over:j.over,seq:j.seq,jump:true}));render();return;}}
+    crown(tr,tc);S.sel=null;S.moves=[];S.cur=3-S.cur;
+    const p1=S.board.flat().filter(v=>own(v)===1).length,p2=S.board.flat().filter(v=>own(v)===2).length;
+    if(!p1)S.status='p2wins';else if(!p2)S.status='p1wins';else if(!allMoves(S.board,S.cur).length)S.status=S.cur===1?'p2wins':'p1wins';
+    render();if(CB.onMove)CB.onMove(getState(),S.cur===1?'host':'guest');
+    if(S.status!=='playing')setTimeout(()=>CB.onResult&&CB.onResult(S.status,S),400);
   }
-
-  function getState() { return JSON.parse(JSON.stringify(state)); }
-
-  function render() {
-    container.innerHTML = '';
-    const board = document.createElement('div');
-    board.className = 'checkers-board';
-    const allMoves = getAllMoves(state.board, state.current);
-    const mustJump = allMoves.some(m=>m.isJump);
-
-    for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-      const cell = document.createElement('div');
-      cell.className='checkers-cell '+((r+c)%2===0?'light':'dark');
-      cell.dataset.r=r; cell.dataset.c=c;
-      const v=state.board[r][c];
-      if (state.selected && state.selected[0]===r && state.selected[1]===c) cell.classList.add('selected');
-      if (state.validMoves.some(m=>m.to[0]===r&&m.to[1]===c)) cell.classList.add('valid-move');
-      if (v!==0) {
-        const disc=document.createElement('div');
-        disc.className='checker '+(owner(v)===1?'p1-checker':'p2-checker')+(isKing(v)?' king':'');
-        if(isKing(v)) disc.textContent='♔';
-        cell.appendChild(disc);
-      }
-      cell.addEventListener('click',()=>handleClick(r,c));
-      board.appendChild(cell);
-    }
-    container.appendChild(board);
-    if (callbacks.onStatusUpdate) callbacks.onStatusUpdate(state);
-  }
-
-  function handleClick(r, c) {
-    if (isOnlineTurn) return;
-    if (state.status !== 'playing') return;
-    const v = state.board[r][c];
-    const allMoves = getAllMoves(state.board, state.current);
-    const mustJump = allMoves.some(m=>m.isJump);
-
-    if (state.selected) {
-      const move = state.validMoves.find(m=>m.to[0]===r&&m.to[1]===c);
-      if (move) { executeMove(move); return; }
-    }
-    if (owner(v)===state.current) {
-      const pieceMoves = getMoves(state.board, r, c, mustJump).filter(m=>!mustJump||(mustJump&&m.isJump));
-      const filteredMoves = mustJump ? pieceMoves.filter(m=>m.isJump) : pieceMoves;
-      state.selected = filteredMoves.length>0 ? [r,c] : null;
-      state.validMoves = filteredMoves;
-    } else {
-      state.selected = null; state.validMoves = [];
-    }
-    render();
-  }
-
-  function executeMove(move) {
-    const [fr,fc]=move.from, [tr,tc]=move.to;
-    const piece = state.board[fr][fc];
-    state.board[tr][tc]=piece;
-    state.board[fr][fc]=0;
-    if (move.isJump) {
-      const [or,oc]=move.over;
-      const cap=state.board[or][oc];
-      if(owner(cap)===1) state.captured.p2++;
-      else state.captured.p1++;
-      state.board[or][oc]=0;
-      // Check for further jumps
-      const furtherJumps = getJumps(state.board,tr,tc,piece,move.seq||[]);
-      if (furtherJumps.length>0) {
-        // Must jump again
-        state.selected=[tr,tc];
-        state.validMoves=furtherJumps.map(j=>({from:[tr,tc],to:j.to,over:j.over,seq:j.seq,isJump:true}));
-        // King promotion before continuing
-        checkKing(tr,tc);
-        render();
-        return;
-      }
-    }
-    checkKing(tr,tc);
-    state.selected=null; state.validMoves=[];
-    state.current=3-state.current;
-    // Check win
-    const p1 = state.board.flat().filter(v=>owner(v)===1).length;
-    const p2 = state.board.flat().filter(v=>owner(v)===2).length;
-    if (p1===0) state.status='p2wins';
-    else if (p2===0) state.status='p1wins';
-    else if (getAllMoves(state.board,state.current).length===0) state.status=state.current===1?'p2wins':'p1wins';
-    render();
-    if (callbacks.onMove) callbacks.onMove(getState(), state.current===1?'host':'guest');
-    if (state.status!=='playing') setTimeout(()=>callbacks.onResult&&callbacks.onResult(state.status,state),400);
-  }
-
-  function checkKing(r,c) {
-    const v=state.board[r][c];
-    if (v===1&&r===0) state.board[r][c]=11;
-    if (v===2&&r===7) state.board[r][c]=22;
-  }
-
-  return { start, loadState, getState, initState };
+  return{start,loadState,getState,initState};
 })();
